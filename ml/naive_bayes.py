@@ -1,26 +1,25 @@
 from random import random
 from math import log
 
+from astrology.corpora import TwentyNewsGroupCorpus
+from astrology.metric import cross_validate
+
+
 
 class BernoulliNB(object):
     
     def __init__(self):
-        
-        # Stores features counts for a given class
-        self._class_feature_counts = dict()
-        
-        # Stores class counts
-        self._class_counts = dict()
-        
-        # Number of observations
-        self._N = 0.0
-        
-        # All features
-        self._features = set()
+        self.reset()
      
     def _get_features(self, text):
         """Get features as a set for this training example"""
         return set([w.lower() for w in text.split(" ")])
+
+    def reset(self):
+        self._N = 0.0
+        self._features = set()
+        self._class_counts = dict()
+        self._class_feature_counts = dict()
     
     def observe(self, text, class_):
         
@@ -146,24 +145,9 @@ class MultinomialNB(object):
         return pred_class
 
 def test_bernouli_naive_bayes():
-    train_set = [("this sucks", "neg"),
-             ("this is boring", "neg"),
-             ("this is very boring", "neg"),
-             ("this is the worst", "neg"),
-             ("I hate this", "neg"),
-             ("I hate this", "neg"),
-             ("this is great", "pos"),
-             ("this is great I love this", "pos"),
-             ("this is very good I love this", "pos"),
-             ("I am excited", "pos"),
-             ("I am pumped", "pos"),
-             ("I love this", "pos")]
-
-    nb = BernoulliNB()
-    [nb.observe(d,c) for d,c in train_set]
-    print(nb.predict("this sucks"))
+    bnb = BernoulliNB()
+    corpus = TwentyNewsGroupCorpus()
+    cross_validate(corpus, bnb)
 
 if __name__ == "__main__":
     test_bernouli_naive_bayes()
-
-

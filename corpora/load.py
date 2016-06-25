@@ -3,7 +3,7 @@ import os
 import bson
 from pymongo import MongoClient
 
-from ml.util import get_path
+from astrology.util import get_path
 
 
 def load_20_news_group():
@@ -11,7 +11,7 @@ def load_20_news_group():
         a mongo database
     """
     mc = MongoClient()
-    db = mc["ml"]
+    db = mc["astrology"]
 
     coll_name = "corpora.twenty_news_group"
     meta_coll_name = "corpora.twenty_news_group.meta"
