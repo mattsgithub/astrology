@@ -60,6 +60,7 @@ def get_20_news_group(batch_size, labels):
     dir_names = test_dir_names + train_dir_names
 
     for i, dir_name in enumerate(dir_names):
+        tag = "test" if i < len(test_dir_names) else "train"
         label = dir_name
         dir_path = os.path.join(test_path, dir_name)
         file_names = os.listdir(dir_path)
@@ -77,7 +78,7 @@ def get_20_news_group(batch_size, labels):
             text = unicode(text, errors="ignore")
 
             labels.add(label)
-            docs.append({"text": text, "label": label})
+            docs.append({"text": text, "label": label, "tag": tag})
 
             if len(docs) > batch_size:
                 yield docs

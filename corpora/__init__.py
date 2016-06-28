@@ -20,21 +20,35 @@ class TwentyNewsGroupCorpus(object):
         self._labels = set(meta.get("labels"))
 
         self._docs_by_label = {l:[] for l in self._labels}
-        self._training_examples = [] 
+        self._all_training_examples = [] 
+        self._test_examples = []
+        self._training_examples = []
 
         for doc in coll.find():
             label = doc.get("label")
             text = doc.get("text")
+            tag = doc.get("tag")
             example = Example(text=text, label=label)
-            self._training_examples.append(example)
 
-        shuffle(self._training_examples)
+            if tag == "test":
+                self._test_examples.append(example)
+            else:
+                self._training_examples.append(example)
 
-        # Close connection
         mc.close()
+
+        self._all_training_examples = self._training_examples + self._test_examples
+
+        shuffle(self._all_training_examples)
 
     def get_labels(self):
         return self._labels
 
+    def get_all_training_examples(self):
+        return self._training_examples + self._test_examples
+    
     def get_training_examples(self):
-        return self._training_examples
+        return self._training_examples 
+
+    def get_test_examples(self):
+        return self._test_examples
