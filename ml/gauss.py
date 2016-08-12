@@ -1,8 +1,175 @@
 import numpy as np
-from numpy.linalg import inv, det
+from numpy.linalg import inv, det, eig
 from matplotlib import pyplot as plt
 
 from astrology import util
+
+
+class LDAProjection(object):
+    """
+    Compute Sw matrix
+    Compute SB matrix
+
+    Compute eigenvectors of:
+    Sw-1 Sb
+
+    Compute within class scatter: Sw
+    Compute between class scatter: Sb
+
+    Compute class means
+    Compute mean of class means
+    Largest eigenvalue is first dimension
+
+    Demo should show plot of eiegen vectors on data
+    and data points projected onto first eigenvector
+    """
+    def __init__(self):
+        self._global_mean_vector = None
+        self._mean_vector_by_class = dict()
+        self._scatter_matrix_by_class = dict()
+        self._classes = set()
+        self._p = None
+        self._N = 0.0
+        self._N_by_class = dict()
+
+    def get_dimensions(self):
+        # Calculate within class scatter
+        Sw = np.sum(self._scatter_matrix_by_class.values(),
+                    axis=0)
+
+        # Calculate between class scatter
+        s = (self._p, self._p)
+        Sb = np.zeros(s)
+        for k in self._classes:
+            a = self._mean_vector_by_class[k] - self._global_mean_vector
+            Sb += self._N_by_class[k] * a.dot(a.T)
+
+        # Compute eigenvectors
+        Sw_inv = inv(Sw)
+        A = Sw_inv.dot(Sb)
+        eigen_values, eigen_vectors = eig(A)
+        idx = np.argsort(eigen_values)
+        eigen_vectors = eigen_vectors[idx][::-1]
+        return eigen_vectors
+
+    def observe(self, x, y):
+        # If none, then this is the first
+        # time making an observation
+        if self._p is None:
+            self._p = len(x)
+            self._global_mean_vector = np.zeros(self._p)
+        elif self._p != len(x):
+            raise ValueError("Dimension does not match previous dimensions")
+
+        if y not in self._classes:
+            self._instantiate_class(y)
+
+        # Update total number of observations
+        self._N += 1.0
+
+        # Update number of observations by class
+        self._N_by_class[y] += 1.0
+
+        # Update scatter matrix by class
+        self._scatter_matrix_by_class[y] = \
+            util.get_updated_cov(self._scatter_matrix_by_class[y],
+                                 self._mean_vector_by_class[y],
+                                 self._N_by_class[y],
+                                 x)
+
+        # Update mean by class
+        self._mean_vector_by_class[y] = \
+            util.get_updated_mean(self._mean_vector_by_class[y],
+                                  self._N_by_class[y],
+                                  x)
+
+        # Update global mean
+        self._global_mean_vector = \
+            util.get_updated_mean(self._global_mean_vector,
+                                  self._N,
+                                  x)
+
+    def _instantiate_class(self, y):
+        """ Creates dictionary entries
+            for this new class in order to
+            record various stats
+
+            Parameters
+            ----------
+            y : Object
+                The class label
+
+        """
+
+        # Add to class set
+        self._classes.add(y)
+
+        # Initialize number of training examples
+        # by class
+        self._N_by_class[y] = 0.0
+
+        # Initialize mean by class to zeros
+        self._mean_vector_by_class[y] = np.zeros(self._p)
+
+        # Initialize scatter matrix to zeros
+        s = (self._p, self._p)
+        self._scatter_matrix_by_class[y] = np.zeros(s)
+
+    @staticmethod
+    def demo():
+        # Issue on mac os x:
+        # Run using 'frameworkpython' instead of 'python'
+        #
+        # Generate points from true
+        # underly distribution
+
+        # Class 1
+        mean = np.array([3., 5.])
+        cov = np.array([[3., 0.], [0., 3.]])
+        N1 = 100
+        x1, y1 = np.random.multivariate_normal(mean, cov, N1).T
+        plt.plot(x1, y1, 'o', color='blue')
+
+        # Class 2
+        mean = np.array([5., 0.])
+        cov = np.array([[3., 0.], [0., 3.]])
+        N2 = 100
+        x2, y2 = np.random.multivariate_normal(mean, cov, N2).T
+        plt.plot(x2, y2, 'o', color='red')
+
+        # Run LDA
+        lda = LDAProjection()
+        for i in xrange(N1):
+            x = np.array([x1[i], y1[i]])
+            lda.observe(x, 'c1')
+
+        for i in xrange(N2):
+            x = np.array([x2[i], y2[i]])
+            lda.observe(x, 'c2')
+
+        y = lda.get_dimensions()
+        # Get first eigenvector
+        e1 = y[:, 0]
+
+        plt.quiver(e1[0], e1[1], color="black")
+        plt.quiver(1.0, 0.0, color="red")
+        plt.xlim([-20.0, 20.0])
+        plt.ylim([-20.0, 20.0])
+
+        # Project points
+        for i in range(N1):
+            r = np.sqrt(x1[i]**2 + y1[i]**2)
+            x = r*e1[0]
+            y = r*e1[1]
+            plt.plot(x, y, 'o', color="darkblue")
+
+        # Project points
+        for i in range(N2):
+            r = np.sqrt(x2[i]**2 + y2[i]**2)
+            x = r*e1[0]
+            y = r*e1[1]
+            plt.plot(x, y, 'o', color="darkred")
+        plt.show()
 
 
 def get_gauss_pdf_value(x, mu, cov):
@@ -383,4 +550,5 @@ class LDA(object):
         m = - dbeta[0]/dbeta[1]
         y = m*x + b
         return y
-LDA.demo()
+
+LDAProjection.demo()
