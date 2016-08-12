@@ -1,3 +1,2 @@
 # Astrology
-Implementations of various machine learning algorithms and other stuff
-that make computers seem magical
+This is a repo where I practice implementing various machine learning algorithms.
