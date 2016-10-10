@@ -1,14 +1,43 @@
 """Implementation of sorting algorithms
 """
+import math
 
 
 def _compare(x1, x2, ascending):
     return x1 > x2 if ascending else x2 > x1
 
 
-def merge_sort(x):
-    """TODO"""
-    pass
+def _merge(list_, p, q, r):
+    left = list_[p:q] + [float("inf")]
+    right = list_[q:r] + [float("inf")]
+
+    i = 0
+    j = 0
+
+    for k in range(p, r):
+        if left[i] <= right[j]:
+            list_[k] = left[i]
+            i += 1
+        else:
+            list_[k] = right[j]
+            j += 1
+
+
+def merge_sort(list_, p=0, r=None):
+    if r is None:
+        r = len(list_)
+
+    if p < r:
+        q = math.floor((p+r)/2)
+        merge_sort(list_, p, q)
+        merge_sort(list_, q+1, r)
+        _merge(list_, p, q, r)
+list_ = [12, 3, 15, 8, 100, 113, 2, 46, 45]
+
+print(list_)
+merge_sort(list_)
+print(list_)
+
 
 
 def bubble_sort(x, ascending=True):
@@ -28,8 +57,6 @@ def bubble_sort(x, ascending=True):
 
 
 def insertion_sort(x, ascending=True):
-    """O(N^2)
-    """
     for i in xrange(1, len(x)):
         val = x[i]
         j = i - 1
