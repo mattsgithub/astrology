@@ -3,15 +3,6 @@ from matplotlib import pyplot as plt
 
 
 class Perceptron(object):
-    """
-        Batch gradient descent
-        implementation of the simplest
-        neural network
-
-        TODO:
-        [ ] Vetorize implementation
-    """
-
     def __init__(self, num_epochs, step_size):
         self._num_epochs = num_epochs
         self._step_size = step_size
@@ -21,11 +12,25 @@ class Perceptron(object):
         self._N = None
         self._p = None
 
-    def _transfer_function(self, w, x):
+    def transfer_function(self, w, x):
         return w.dot(x)
 
-    def _activation_function(self, x):
+    def activation_function(self, x):
         return 1. if x >= 0 else 0.
+
+    def observe(self, x, y):
+        if self._w is None:
+            self._y = []
+            self._X = []
+            self._p = len(x)
+            self._w = np.random.random(self._p + 1)
+        x = np.insert(x, 0, 1.)
+
+        self._X.append(x)
+        self._y.append(y)
+
+        y_hat = x.dot(self._w)
+        self._w = self._w + self._step_size * (y_hat - y)*x
 
     def train(self, X, y):
 
@@ -36,7 +41,8 @@ class Perceptron(object):
         self._p = X.shape[1]
 
         # Number of weights (add one for bias)
-        self._w = np.random.random(self._p+1)
+        self._w = np.random.random(self._p + 1)
+        self._w = np.zeros(self._p + 1)
 
         # Design matrix (prepend column of ones)
         self._X = np.column_stack((np.ones(self._N), X))
@@ -46,14 +52,10 @@ class Perceptron(object):
 
         # For each epoch ...
         for e in range(self._num_epochs):
-            # For each weight ...
-            for j, w in enumerate(self._w):
-                sum_ = 0.0
-                for i, x in enumerate(self._X):
-                    r = self._transfer_function(self._w, x)
-                    y_hat = self._activation_function(r)
-                    sum_ += (y_hat - y[i]) * self._X[i][j]
-                w = w - (self._step_size/self._N) * sum_
+            y_hat = self._X.dot(self._w)
+            y_hat = np.array(map(lambda x: self.activation_function(x), y_hat))
+            error = y_hat - y
+            self._w = self._w - (self._step_size/self._N) * self._X.T.dot(error)
 
     def predict(self, x):
         r = self._activation_function(
@@ -71,6 +73,7 @@ class Perceptron(object):
             plt.scatter(x[1], x[2], color=color)
 
         # Plot boundary
+        self._X = np.array(self._X)
         col = self._X[:, 1]
         x = np.arange(col.min(), col.max(), .1)
         y = [(self._w[0] + i * self._w[1])/(self._w[2] * -1.) for i in x]
@@ -112,9 +115,12 @@ class Perceptron(object):
         X = np.concatenate((X1, X2))
 
         # Train perceptron
-        p.train(X, y)
+        #  p.train(X, y)
+        for i, x in enumerate(X):
+            p.observe(x, y[i])
 
         # Plot classifier
         p.plot()
+
 
 Perceptron.demo()
