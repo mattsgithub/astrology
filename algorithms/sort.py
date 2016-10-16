@@ -1,43 +1,55 @@
 """Implementation of sorting algorithms
 """
-import math
 
 
 def _compare(x1, x2, ascending):
     return x1 > x2 if ascending else x2 > x1
 
 
-def _merge(list_, p, q, r):
-    left = list_[p:q] + [float("inf")]
-    right = list_[q:r] + [float("inf")]
+def _merge(x, ascending, p, q, r):
 
+    # Create copied list for left
+    left = x[p:q + 1]
+
+    # Create copied list for right
+    right = x[q + 1:r + 1]
+
+    # Add 'bottom cards'
+    bottom_card = float("inf") if ascending else float("-inf")
+    left += [bottom_card]
+    right += [bottom_card]
+
+    # Now, these two lists are
+    # sorted piles. Keep pulling from either
+    # until piles are empty. Replace current list
+    # with most recently pulled card
     i = 0
     j = 0
-
-    for k in range(p, r):
-        if left[i] <= right[j]:
-            list_[k] = left[i]
+    for k in range(p, r + 1):
+        if _compare(right[j], left[i], ascending):
+            x[k] = left[i]
+            # Update count for left
+            # since card was 'taken'
             i += 1
         else:
-            list_[k] = right[j]
+            x[k] = right[j]
+            # Update count for right
+            # since card was 'taken'
             j += 1
 
 
-def merge_sort(list_, p=0, r=None):
+def merge_sort(x, ascending=True, p=0, r=None):
     if r is None:
-        r = len(list_)
+        r = len(x) - 1
 
+    # Keep splitting
+    # as long as this
+    # condition holds true
     if p < r:
-        q = math.floor((p+r)/2)
-        merge_sort(list_, p, q)
-        merge_sort(list_, q+1, r)
-        _merge(list_, p, q, r)
-list_ = [12, 3, 15, 8, 100, 113, 2, 46, 45]
-
-print(list_)
-merge_sort(list_)
-print(list_)
-
+        q = (p+r)/2
+        merge_sort(x, ascending, p, q)
+        merge_sort(x, ascending, q + 1, r)
+        _merge(x, ascending, p, q, r)
 
 
 def bubble_sort(x, ascending=True):
