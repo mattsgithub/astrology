@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 def sigmoid(x):
@@ -13,19 +14,26 @@ class NeuralNetwork(object):
         self._W2 = None
 
     def predict(self, x):
+        x = [1.] + x
         return self._forward_propagate(x)
 
-    def train(self, X, y):
-        num_hidden = 3
-        num_output = 1
-        num_epochs = 20
-        num_inputs = 2
+    def train(self,
+              X,
+              y,
+              num_inputs=1,
+              num_hidden=6,
+              num_output=1,
+              eta=0.2,
+              num_epochs=1000):
+
         num_examples = len(y)
 
-        eta = 0.2
+        # Design matrix (prepend column of ones)
+        X = np.column_stack((np.ones(num_examples), X))
 
-        self._W1 = np.random.rand(num_inputs + 1, num_hidden)
-        self._W2 = np.random.rand(num_hidden, num_output)
+        # Add one for bias unit
+        self._W1 = np.random.rand(num_hidden, num_inputs + 1)
+        self._W2 = np.random.rand(num_output, num_hidden)
 
         for num_epochs in xrange(num_epochs):
             # Randomize for each pass; Used for stochastic gradient descent
@@ -37,56 +45,53 @@ class NeuralNetwork(object):
                 # Compute first error terms
                 e1 = np.zeros(num_output)
                 for k in xrange(num_output):
-                    e1[k] = y_hat[k] * (1. - y_hat[k]) * (y_hat[k] - y[k])
+                    e1[k] = y_hat[k] * (1. - y_hat[k]) * (y_hat[k] - y[n][k])
 
                 # For each weight....
                 for k in xrange(num_output):
                     for j in xrange(num_hidden):
-                        self._W2[j][k] = self._W2[j][k] - eta * e1[k] * self._h[j]
+                        change = self._W2[k][j] - eta * e1[k] * self._h[j]
+                        self._W2[k][j] = change
 
                 # Compute second layer of error terms
                 e2 = np.zeros(num_hidden)
                 for j in xrange(num_hidden):
-                    e2[j] = self._h[j] * (1. - self._h[j]) * np.sum([e1[k] * self._W[j][k] for k in xrange(num_output)])
+                    len_ = xrange(num_output)
+                    _sum = np.sum([e1[k] * self._W1[j][k] for k in len_])
+                    e2[j] = self._h[j] * (1. - self._h[j]) * _sum
 
                 # For each weight....
                 for j in xrange(num_hidden):
                     for i in xrange(num_inputs + 1):
-                        self._W1[i][j] = self._W1[i][j] - eta * e2[j] * X[n][i]
+                        self._W1[j][i] = self._W1[j][i] - eta * e2[j] * X[n][i]
 
     def _forward_propagate(self, x):
-        self._h = sigmoid(self._W1.dot(x))
-        y_hat = sigmoid(self._W2.dot(self._h))
+        u1 = self._W1.dot(x)
+        self._h = sigmoid(u1)
+
+        u2 = self._W2.dot(self._h)
+        y_hat = sigmoid(u2)
+
         return y_hat
 
-# Number of positive examples
-num_pos = 100
+    @staticmethod
+    def demo():
+        ann = NeuralNetwork()
 
-# Number of negative examples
-num_neg = 100
+        # Training domain
+        X_train = np.linspace(start=0., stop=2. * np.pi, num=40)
+        y_train = [[y] for y in .5 * (np.sin(X_train) + 1.)]
 
-# Covariance matrix
-cov = [[1., 0], [0., 1.]]
+        # Train network
+        ann.train(X_train, y_train)
 
-# Mean vector for positive
-# and negative examples
-mu_pos = [2., 2.]
-mu_neg = [-2., -2.]
+        # Plot ground truth
+        plt.plot(X_train, y_train, color='gray', marker='x')
 
-# Response vector
-y = [1.]*num_pos + [0.]*num_neg
+        # Plot prediction
+        plt.scatter(X_train, [ann.predict([i]) for i in X_train], marker='x', color='green')
 
-# Design matrix
-X1 = np.random.multivariate_normal(mean=mu_pos,
-                                   cov=cov,
-                                   size=num_pos)
+        plt.show()
 
-X2 = np.random.multivariate_normal(mean=mu_neg,
-                                   cov=cov,
-                                   size=num_neg)
-# Combine both into one matrix
-X = np.concatenate((X1, X2))
-
-
-ann = NeuralNetwork()
-ann.train(X, y)
+if __name__ == '__main__':
+    NeuralNetwork.demo()
