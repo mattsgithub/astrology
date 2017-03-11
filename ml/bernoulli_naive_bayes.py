@@ -1,167 +1,136 @@
-from random import random
+"""Builds a Bernoulli naive Bayes classifier
+"""
+
 from math import log
-
-from astrology.corpora import TwentyNewsGroupCorpus
-from astrology.metric import validate 
-
+import glob
+from collections import Counter
 
 
-class BernoulliNB(object):
-    
-    def __init__(self):
-        self.reset()
-     
-    def _get_features(self, text):
-        """Get features as a set for this training example"""
-        return set([w.lower() for w in text.split(" ")])
+def get_features(text):
+    """Extracts features from text
 
-    def reset(self):
-        self._N = 0.0
-        self._features = set()
-        self._class_counts = dict()
-        self._class_feature_counts = dict()
-    
-    def observe(self, text, class_):
-        
-        # Update observation count
-        self._N += 1.0
-        
-        features = self._get_features(text)
-
-        self._features.update(features)
-        
-        # Update count dicts if this is the first
-        # time observing this class
-        if class_ not in self._class_counts:
-            self._class_counts[class_] = 0.0
-            self._class_feature_counts[class_] = dict()
-               
-        # Update class count
-        self._class_counts[class_] += 1.0
-        
-        # Update feature count
-        for feature in features:
-            if feature not in self._class_feature_counts[class_]:
-                self._class_feature_counts[class_][feature] = 0.0
-            self._class_feature_counts[class_][feature] += 1.0
-
-    def predict(self, text):
-        
-        if (self._N) == 0.0:
-            raise Exception("Need to observe at least one example")
-        
-        features = self._get_features(text)
-        
-        pred_class = None
-        max_ = float("-inf")
-        
-        for class_ in self._class_counts:
-            
-            # Number of training examples with this class
-            M = self._class_counts[class_]
-            
-            log_sum = log(M/self._N)
-            for f in features:
-                # Laplace smoothing
-                # Add one if feature doesn't exist
-                a = self._class_feature_counts[class_].get(f,0.0) + 1.0     
-                b = (M + len(self._features))*1.0
-                log_sum += log(a/b)
-            if log_sum >= max_:
-                max_ = log_sum
-                pred_class = class_
-        return pred_class
+    Args:
+        text (str): A blob of unstructured text
+    """
+    return set([w.lower() for w in text.split(" ")])
 
 
-class MultinomialNB(object):
+class BernoulliNBTextClassifier(object):
 
     def __init__(self):
-        self.reset()
+        self._log_priors = None
+        self._cond_probs = None
+        self.features = None
 
-    def reset(self):
-        self._N = 0.0
-        self._class_counts = dict()
-        self._class_sample_counts = dict()
-        self._class_feature_counts = dict()
-        self._features = set()
-        pass
-     
-    def _get_features(self, text):
-        """Get features as a set for this training example"""
-        return [w.lower() for w in text.split(" ")]
-    
-    def observe(self, text, class_):
-        
-        # Update observation count
-        self._N += 1.0
-        
-        features = self._get_features(text)
+    def train(self, documents, labels):
+        """Train a Bernoulli naive Bayes classifier
 
-        self._features.update(features)
-        
-        if class_ not in self._class_counts:
-            self._class_counts[class_] = 0.0
-        self._class_counts[class_] += 1.0
+        Args:
+            documents (list): Each element in this list
+                is a blog of text
+            labels (list): The ground truth label for
+                each document
+        """
 
-        if class_ not in self._class_sample_counts:
-            self._class_sample_counts[class_] = 0.0
+        """Compute log( P(Y) )
+        """
+        label_counts = Counter(labels)
+        N = float(sum(label_counts.values()))
+        self._log_priors = {k: log(v/N) for k, v in label_counts.iteritems()}
 
-        if class_ not in self._class_feature_counts:
-            self._class_feature_counts[class_] = dict()
+        """Feature extraction
+        """
+        # Extract features from each document
+        X = [set(get_features(d)) for d in documents]
 
-        self._class_sample_counts[class_] += len(features)
-        
-        # Update feature count
-        for feature in features:
-            if feature not in self._class_feature_counts[class_]:
-                self._class_feature_counts[class_][feature] = 0.0
-            self._class_feature_counts[class_][feature] += 1.0
+        # Get all features
+        self.features = set([f for features in X for f in features])
+
+        """Compute log( P(X|Y) )
+
+           Use Laplace smoothing
+           n1 + 1 / (n1 + n2 + 2)
+        """
+        self._cond_probs = {l: {f: 0. for f in self.features} for l in self._log_priors}
+
+        # Step through each document
+        for x, l in zip(X, labels):
+            for f in x:
+                self._cond_probs[l][f] += 1.
+
+        # Now, compute log probs
+        for l in self._cond_probs:
+            N = label_counts[l]
+            self._cond_probs[l] = {f: (v + 1.) / (N + 2.) for f, v in self._cond_probs[l].iteritems()}
 
     def predict(self, text):
-        
-        if (self._N) == 0.0:
-            raise Exception("Need to observe at least one example")
-        
-        features = self._get_features(text)
-        
+        """Make a prediction from text
+        """
+
+        # Extract features
+        x = get_features(text)
+
         pred_class = None
         max_ = float("-inf")
 
-        for class_ in self._class_counts:
-            
-            # Number of training examples with this class
-            M = self._class_counts[class_]
-            
-            log_sum = log(M/self._N)
-            for f in features:
-                # Calcualte N_{kj}
-                N_kj = self._class_feature_counts[class_].get(f,0.0)
-
-                # Calcualte M_{k}
-                M_k = self._class_sample_counts[class_]
-
-                # Calculate V
-                V = len(self._features)
-
-                # Calculate log
-                a = N_kj + 1.0
-                b = M_k + V
-                log_sum += log(a/b)
-            if log_sum >= max_:
+        # Perform MAP estimation
+        for l in self._log_priors:
+            log_sum = self._log_priors[l]
+            for f in self.features:
+                prob = self._cond_probs[l][f]
+                log_sum += log(prob if f in x else 1. - prob)
+            if log_sum > max_:
                 max_ = log_sum
-                pred_class = class_
+                pred_class = l
+
         return pred_class
 
-def test_bernouli_naive_bayes():
-    bnb = BernoulliNB()
-    corpus = TwentyNewsGroupCorpus()
-    validate(corpus, bnb)
 
-def test_multinomial_naive_bayes():
-    mbn = MultinomialNB()
-    corpus = TwentyNewsGroupCorpus()
-    validate(corpus, mbn)
+def get_labeled_data(type_):
+    """Get data from:
+        http://openclassroom.stanford.edu/MainFolder/courses/MachineLearning/exercises/ex6materials/ex6DataEmails.zip
+        Create a folder named 'emails' with content from ex6DataEmails in
+        same directory as this script
+    """
+    examples = []
+    labels = []
+
+    file_names = glob.glob('./emails/spam-{0}/*.txt'.format(type_))
+    for n in file_names:
+        f = open(n)
+        examples.append(f.read())
+        labels.append('spam')
+        f.close()
+
+    file_names = glob.glob('./emails/nonspam-{0}/*.txt'.format(type_))
+    for n in file_names:
+        f = open(n)
+        examples.append(f.read())
+        labels.append('nonspam')
+        f.close()
+
+    return examples, labels
 
 if __name__ == "__main__":
-    #test_multinomial_naive_bayes()
-    test_bernouli_naive_bayes()
+    train_docs, train_labels = get_labeled_data('train')
+    test_docs, test_labels = get_labeled_data('test')
+
+    # Train model
+    print('Number of training examples: {0}'.format(len(train_labels)))
+    print('Number of test examples: {0}'.format(len(test_labels)))
+    print('Training model...')
+    nb = BernoulliNBTextClassifier()
+    nb.train(train_docs, train_labels)
+    print('Training complete!')
+    print('Number of features found: {0}'.format(len(nb.features)))
+
+
+    # Simple error test metric
+    print('Testing model...')
+    f = lambda doc, l: 1. if nb.predict(doc) != l else 0.
+    num_missed = sum([f(doc, l) for doc, l in zip(test_docs, test_labels)])
+
+    N = len(test_labels) * 1.
+    error_rate = round(100. * (num_missed / N), 3)
+
+    print('Error rate of {0}% ({1}/{2})'.format(error_rate, int(num_missed), int(N)))
