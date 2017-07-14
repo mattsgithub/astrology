@@ -1,0 +1,4 @@
+*.pyc
+*.pdf
+astrology/corpora/data/*
+astrology/ml/emails/*
