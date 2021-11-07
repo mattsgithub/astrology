@@ -1,0 +1,28 @@
+{
+  "name": "ds.js",
+  "main": "index.js",
+  "authors": [
+    "rjohnson <rjohnson0186@gmail.com>"
+  ],
+  "description": "Dynamical systems analysis in Javascript",
+  "moduleType": [],
+  "keywords": [
+    "dynamical systems"
+  ],
+  "license": "N/A",
+  "homepage": "http://www.mattshomgepage.com",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~2.2.0",
+    "bootstrap": "~3.3.6",
+    "jquery-ui": "~1.11.4",
+    "d3": "~3.5.13"
+  }
+}
