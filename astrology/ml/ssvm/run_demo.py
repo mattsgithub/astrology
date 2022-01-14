@@ -8,8 +8,8 @@ from sklearn.datasets import make_classification
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 
-from ebmpy.ssvm import MultivariateSSVM
-from ebmpy.util import print_metrics
+from astrology.ml.ssvm.multivariate import MultivariateSSVM
+from astrology.ml.ssvm.util import print_metrics
 
 def run_demo():
 
